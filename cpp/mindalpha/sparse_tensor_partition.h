@@ -47,6 +47,7 @@ public:
     void PruneOld(int max_age);
 
 private:
+    void HandlePushStat(SmartArray<uint8_t> keys, bool is_value);
     template<typename T>
     void DoPruneSmall(double epsilon);
 
@@ -60,6 +61,10 @@ private:
     SparseTensorMeta meta_;
     int partition_index_ = -1;
     ArrayHashMap<uint64_t, uint8_t> data_;
+
+    ArrayHashMap<uint64_t, uint8_t> stat_data_;
+    uint32_t stat_value_count_ = 0;
+    bool enable_stat_data_ = false;
 };
 
 }

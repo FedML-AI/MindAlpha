@@ -112,4 +112,8 @@ class UserOption {
     std::string half_float_type;
     json11::Json json;
 };
+struct EmbeddingStat {
+    uint32_t update_times;
+    uint32_t last_update;
+} __attribute__((aligned(32)));
 }

@@ -40,10 +40,16 @@ void SparseTensorPartition::Clear()
     const size_t slice_bytes = GetMeta().GetSliceTotalBytes();
     ArrayHashMap<uint64_t, uint8_t> map(slice_bytes);
     data_.Swap(map);
+    if (stat_value_count_ > 0) {
+        size_t len = stat_value_count_ * sizeof(uint32_t);
+        ArrayHashMap<uint64_t, uint8_t> map(std::max(len, sizeof(EmbeddingStat)));
+        stat_data_.Swap(map);
+    }
 }
 
 void SparseTensorPartition::HandlePush(SmartArray<uint8_t> keys, SmartArray<uint8_t> in, bool is_value)
 {
+    HandlePushStat(keys, is_value);
     TransformIndices(keys, false, false);
     const size_t index_count = keys.size() / sizeof(uint64_t);
     const uint64_t* const indices = reinterpret_cast<uint64_t*>(keys.data());
@@ -415,5 +421,22 @@ std::string SparseTensorPartition::GetSparseExportPath(const std::string& dir_pa
     std::string file_path = JoinPath(dir_path, file_name);
     return file_path;
 }
+void SparseTensorPartition::HandlePushStat(SmartArray<uint8_t> keys, bool is_value) {
+    if (!enable_stat_data_) {
+        return;
+    }
+    const size_t index_count = keys.size() / sizeof(uint64_t);
+    uint64_t* const indices = reinterpret_cast<uint64_t*>(keys.data());
 
+    bool is_new = false;
+    for (size_t i = 0; i < index_count; i++) {
+        auto key = indices[i];
+        auto values = stat_data_.GetOrInit(key, is_new);
+        if (is_new) {
+            memset(values, 0, sizeof(EmbeddingStat));
+        }
+        auto stat = reinterpret_cast<EmbeddingStat*>(values);
+        stat->update_times += 1;
+    }
+}
 }
